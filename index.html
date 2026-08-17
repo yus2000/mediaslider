@@ -452,13 +452,14 @@
       }
     }
 
-    // Tambahkan perintah ini di dalam blok JavaScript index.html Anda:
-    setInterval(() => {
-      if (navigator.onLine) {
-        console.log("Memulai auto sync berkala...");
-        loadMedia();
-      }
-    }, 5 * 60 * 1000); // 5 menit (5 * 60 * 1000 ms)
+    // Konfigurasi waktu dalam menit
+    const menit = 5; 
+    const waktuRefresh = menit * 60 * 1000; // konversi ke milidetik
+
+    setTimeout(() => {
+      // Jalankan refresh halaman
+      window.location.reload();
+    }, waktuRefresh);
 
     
     /* ==========================================================================

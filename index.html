@@ -302,7 +302,17 @@
   </style>
 </head>
 <body>
+  <script>
+      // Konfigurasi waktu dalam menit
+      const menit = 1; 
+      const waktuRefresh = menit * 60 * 1000; // konversi ke milidetik
 
+      setTimeout(() => {
+        // Jalankan refresh halaman
+        window.location.reload(); }, waktuRefresh);
+  </script>
+
+  
   <!-- SLIDER DISPLAY AREA -->
   <div id="slider-stage">
     <div id="empty-state">
@@ -451,17 +461,7 @@
           .catch(err => console.log('SW registration error:', err));
       }
     }
-
-    // Konfigurasi waktu dalam menit
-    const menit = 5; 
-    const waktuRefresh = menit * 60 * 1000; // konversi ke milidetik
-
-    setTimeout(() => {
-      // Jalankan refresh halaman
-      window.location.reload();
-    }, waktuRefresh);
-
-    
+ 
     /* ==========================================================================
        INITIALIZATION & NETWORK STATUS MONITORING
        ========================================================================== */

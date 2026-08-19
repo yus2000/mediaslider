@@ -431,7 +431,19 @@
     }
 
     function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
-    function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
+         
+    function closeAdminModal() {
+      // Sembunyikan modal utama
+      document.getElementById('admin-modal').classList.add('hidden');
+      
+      // Reset tampilan modal kembali ke form login
+      document.getElementById('login-form').classList.remove('hidden');
+      document.getElementById('admin-controls').classList.add('hidden');
+      
+      // Kosongkan input password
+      document.getElementById('admin-pass').value = '';
+      document.getElementById('new-admin-pass').value = '';
+    }
 
     function logoutAdmin() {
       document.getElementById('login-form').classList.remove('hidden');

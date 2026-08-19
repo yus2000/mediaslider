@@ -287,20 +287,43 @@
         alert('Password Admin Salah!');
       }
     }
-
+    
     function saveSettings() {
-      const apiKeyInput = document.getElementById('drive-api-key').value.trim();
-      const folderIdInput = document.getElementById('drive-folder-id').value.trim();
-      const intervalInput = document.getElementById('slide-interval').value;
-      const newPassInput = document.getElementById('new-admin-pass').value;
-
-      if (apiKeyInput) localStorage.setItem('drive_api_key', apiKeyInput);
-      if (folderIdInput) localStorage.setItem('drive_folder_id', folderIdInput);
-      if (intervalInput) localStorage.setItem('slide_interval', intervalInput);
-      if (newPassInput) localStorage.setItem('admin_password', newPassInput);
-
-      alert('Pengaturan berhasil disimpan!');
-      
+        const apiKeyInput = document.getElementById('drive-api-key').value.trim();
+        const folderIdInput = document.getElementById('drive-folder-id').value.trim();
+        const intervalInput = document.getElementById('slide-interval').value;
+        const newPassInput = document.getElementById('new-admin-pass').value.trim();
+  
+      // Jika diisi, simpan ke localStorage. Jika dikosongkan, hapus agar kembali ke DEFAULT
+      if (apiKeyInput) {
+        localStorage.setItem('drive_api_key', apiKeyInput);
+          } else {
+            localStorage.removeItem('drive_api_key');
+            document.getElementById('drive-api-key').value = DEFAULT_API_KEY;
+          }
+    
+      if (folderIdInput) {
+        localStorage.setItem('drive_folder_id', folderIdInput);
+          } else {
+            localStorage.removeItem('drive_folder_id');
+            document.getElementById('drive-folder-id').value = DEFAULT_FOLDER_ID;
+          }
+        
+      if (intervalInput) {
+        localStorage.setItem('slide_interval', intervalInput);
+          } else {
+            localStorage.removeItem('slide_interval');
+            document.getElementById('slide-interval').value = DEFAULT_INTERVAL;
+          }
+    
+      if (newPassInput) {
+        localStorage.setItem('admin_password', newPassInput);
+            alert('Pengaturan dan Password Admin baru berhasil disimpan!');
+          } else {
+            alert('Pengaturan disimpan! (Menggunakan konfigurasi Default untuk kolom yang kosong)');
+          }
+    
+      // Muat ulang media dan jalankan slider kembali
       loadMedia();
       startSlider();
       closeAdminModal();

@@ -34,7 +34,7 @@
       object-fit: contain;
     }
 
-    /* Floating Control Bar - Selalu Muncul di Kanan Bawah */
+    /* Floating Control Bar - Kanan Bawah */
     .controls-container {
       position: absolute;
       bottom: 20px;
@@ -82,20 +82,21 @@
       position: absolute;
       top: 15px;
       left: 15px;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       color: #fff;
-      padding: 6px 12px;
+      padding: 8px 14px;
       border-radius: 20px;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       z-index: 998;
       opacity: 0;
       transition: opacity 0.5s ease;
+      pointer-events: none;
     }
     #sync-indicator.show { opacity: 1; }
-    .dot { width: 8px; height: 8px; background: #00ff66; border-radius: 50%; }
+    .dot { width: 8px; height: 8px; background: #00ff66; border-radius: 50%; box-shadow: 0 0 8px #00ff66; }
 
     /* Modal Styling */
     .modal {
@@ -133,7 +134,7 @@
   <div id="slider-container" class="fullscreen">
     <!-- Indikator Auto Sync -->
     <div id="sync-indicator">
-      <span class="dot"></span> Memperbarui Konten Drive...
+      <span class="dot"></span> Memeriksa perubahan Drive...
     </div>
 
     <div id="media-display">
@@ -174,7 +175,7 @@
         <input type="number" id="slide-interval" value="5" min="1">
 
         <label>Interval Auto Sync Drive (Menit):</label>
-        <input type="number" id="sync-interval" value="2" min="1">
+        <input type="number" id="sync-interval" value="1" min="1">
 
         <label>Password Admin Baru:</label>
         <input type="password" id="new-admin-pass" placeholder="Kosongkan jika tak diubah">
@@ -183,30 +184,26 @@
         <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
       </div>
 
-      <button class="close-btn" onclick="closeAdminModal()">Tutup</button>
+      <button class="close-btn" onclick="closeAdminModal()">Tutup / Cancel</button>
     </div>
   </div>
 
   <script>
-    // ============================================================
-    // KONFIGURASI DEFAULT
-    // ============================================================
-   
+
     const DEFAULT_API_KEY = 'AIzaSyA1y9CHz-Jf6NKUZRCYvNfHF6VM8PYLOSY';
     const DEFAULT_FOLDER_ID = '1QNUjnXB7X8su84LAVCxaoGIud3rQZLht';
     const DEFAULT_PASSWORD = 'admin123';
     const DEFAULT_INTERVAL = 5; // detik
-    const DEFAULT_SYNC_INTERVAL = 2; // menit per auto sync dari Drive
 
+    
     let mediaList = [];
     let currentIndex = 0;
     let slideTimer = null;
     let syncTimer = null;
 
-    // Register Service Worker untuk PWA / Offline Caching
     if ('serviceWorker' in navigator) {
       const swCode = `
-        const CACHE_NAME = 'media-slider-v1';
+        const CACHE_NAME = 'media-slider-v2';
         self.addEventListener('install', e => self.skipWaiting());
         self.addEventListener('activate', e => self.clients.claim());
         self.addEventListener('fetch', e => {
@@ -219,28 +216,12 @@
       navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.error);
     }
 
-    // Fungsi Mengambil Konfigurasi
-    function getApiKey() {
-      return localStorage.getItem('drive_api_key') || DEFAULT_API_KEY;
-    }
+    function getApiKey() { return localStorage.getItem('drive_api_key') || DEFAULT_API_KEY; }
+    function getFolderId() { return localStorage.getItem('drive_folder_id') || DEFAULT_FOLDER_ID; }
+    function getAdminPassword() { return localStorage.getItem('admin_password') || DEFAULT_PASSWORD; }
+    function getSlideInterval() { return parseInt(localStorage.getItem('slide_interval')) || DEFAULT_INTERVAL; }
+    function getSyncInterval() { return parseInt(localStorage.getItem('sync_interval')) || DEFAULT_SYNC_INTERVAL; }
 
-    function getFolderId() {
-      return localStorage.getItem('drive_folder_id') || DEFAULT_FOLDER_ID;
-    }
-
-    function getAdminPassword() {
-      return localStorage.getItem('admin_password') || DEFAULT_PASSWORD;
-    }
-
-    function getSlideInterval() {
-      return parseInt(localStorage.getItem('slide_interval')) || DEFAULT_INTERVAL;
-    }
-
-    function getSyncInterval() {
-      return parseInt(localStorage.getItem('sync_interval')) || DEFAULT_SYNC_INTERVAL;
-    }
-
-    // Inisialisasi Saat Halaman Dimuat
     window.onload = () => {
       document.getElementById('drive-api-key').value = getApiKey();
       document.getElementById('drive-folder-id').value = getFolderId();
@@ -252,69 +233,65 @@
       startAutoSync();
     };
 
-    // Fungsi Toggle Fullscreen Mode
     function toggleFullscreen() {
       const elem = document.documentElement;
       if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        if (elem.requestFullscreen) {
-          elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) {
-          elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) {
-          elem.msRequestFullscreen();
-        } else if (elem.mozRequestFullScreen) {
-          elem.mozRequestFullScreen();
-        }
+        if (elem.requestFullscreen) elem.requestFullscreen();
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
       } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          document.mozCancelFullScreen();
-        }
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
       }
     }
 
-    // Fetch daftar file dari Google Drive API
+    // Fetch Google Drive File List
     async function fetchFromDrive(folderId, apiKey) {
       if (!folderId || !apiKey || folderId.includes('MASUKKAN_') || apiKey.includes('MASUKKAN_')) {
         return [];
       }
 
+      // Menambahkan 'modifiedTime' untuk deteksi perubah isi file
       const query = encodeURIComponent(`'${folderId.trim()}' in parents and trashed = false`);
-      const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,mimeType,name)&key=${apiKey.trim()}`;
+      const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,mimeType,name,modifiedTime)&key=${apiKey.trim()}`;
 
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: "no-store" });
         const data = await res.json();
 
         if (data.error) {
-          console.error("Google Drive API Error:", data.error.message);
+          console.error("Drive API Error:", data.error.message);
           return [];
         }
 
         if (!data.files) return [];
 
+        // Mengurutkan file berdasarkan nama secara konsisten
+        data.files.sort((a, b) => a.name.localeCompare(b.name));
+
+        const timestamp = new Date().getTime();
         return data.files.map(file => ({
           id: file.id,
-          url: `https://lh3.googleusercontent.com/d/${file.id}`,
+          modifiedTime: file.modifiedTime,
+          // Tambahkan timestamp (?t=...) untuk memutus cache browser saat file di-replace
+          url: `https://lh3.googleusercontent.com/d/${file.id}?t=${timestamp}`,
           type: file.mimeType.startsWith('video/') ? 'video' : 'image'
         }));
       } catch (err) {
-        console.warn("Gagal fetch dari Drive, mencoba mode offline...", err);
+        console.warn("Gagal terhubung ke Drive, menggunakan offline cache...", err);
         return [];
       }
     }
 
-    // Load & Cache Media dengan Indikator Visual
+    // Load & Synchronize Media
     async function loadMedia(silent = false) {
       const apiKey = getApiKey();
       const folderId = getFolderId();
-
       const indicator = document.getElementById('sync-indicator');
+
       if (silent && navigator.onLine) {
         indicator.classList.add('show');
       }
@@ -323,20 +300,26 @@
         const driveMedia = await fetchFromDrive(folderId, apiKey);
         
         if (driveMedia.length > 0) {
-          // Cek apakah ada perubahan daftar media dibanding memori sebelumnya
-          const isChanged = JSON.stringify(driveMedia) !== JSON.stringify(mediaList);
-          
-          if (isChanged) {
+          // PERBAIKAN UTAMA: Bandingkan berdasarkan kombinasi ID & Tanggal Modifikasi
+          const currentHash = mediaList.map(m => m.id + '_' + (m.modifiedTime || '')).join(',');
+          const newHash = driveMedia.map(m => m.id + '_' + (m.modifiedTime || '')).join(',');
+
+          // Jika ada file bertambah, berkurang, atau diperbarui tanggalnya
+          if (currentHash !== newHash) {
+            console.log("Perubahan konten terdeteksi di Google Drive! Memperbarui slider...");
+            
             mediaList = driveMedia;
             
-            // Caching otomatis file baru ke memori browser
-            try {
+            // Bersihkan cache lama dan perbarui cache baru
+            if ('caches' in window) {
+              caches.delete('media-cache-v1');
               const cache = await caches.open('media-cache-v1');
               mediaList.forEach(m => cache.add(m.url).catch(() => {}));
-              localStorage.setItem('cached_media_list', JSON.stringify(mediaList));
-            } catch(e) {}
+            }
+            
+            localStorage.setItem('cached_media_list', JSON.stringify(mediaList));
 
-            // Jika saat awal kosong, langsung tayangkan media pertama
+            // Reset indeks jika melebihi batas jumlah file baru
             if (currentIndex >= mediaList.length) {
               currentIndex = 0;
             }
@@ -351,7 +334,7 @@
 
       setTimeout(() => {
         indicator.classList.remove('show');
-      }, 1500);
+      }, 2000);
     }
 
     function loadFromLocalCache() {
@@ -362,23 +345,21 @@
       showMedia(currentIndex);
     }
 
-    // Pengecekan Berkelanjutan di Latar Belakang (Auto Sync)
     function startAutoSync() {
-      const intervalMs = getSyncInterval() * 60 * 1000; // Konversi Menit ke Milidetik
+      const intervalMs = getSyncInterval() * 60 * 1000;
       clearInterval(syncTimer);
       
       syncTimer = setInterval(() => {
         if (navigator.onLine) {
-          loadMedia(true); // mode silent sync
+          loadMedia(true);
         }
       }, intervalMs);
     }
 
-    // Tampilkan Media (Foto / Video)
     function showMedia(index) {
       const display = document.getElementById('media-display');
       if (mediaList.length === 0) {
-        display.innerHTML = '<h3 style="color:white; text-align:center; padding: 20px;">Belum ada konten.<br><small style="font-size:0.8rem; color:#aaa;">Klik tombol Admin di kanan bawah untuk mengatur API Key / Folder ID.</small></h3>';
+        display.innerHTML = '<h3 style="color:white; text-align:center; padding: 20px;">Belum ada konten.<br><small style="font-size:0.8rem; color:#aaa;">Buka menu Admin untuk mengatur API Key & Folder ID.</small></h3>';
         return;
       }
 
@@ -395,7 +376,6 @@
       }
     }
 
-    // Schedular Jalannya Slider
     function startSlider() {
       const intervalMs = getSlideInterval() * 1000;
       clearInterval(slideTimer);
@@ -407,7 +387,6 @@
       }, intervalMs);
     }
 
-    // Fungsi Admin Modal
     function loginAdmin() {
       const passInput = document.getElementById('admin-pass').value;
       if (passInput === getAdminPassword()) {
@@ -425,54 +404,34 @@
       const syncIntervalInput = document.getElementById('sync-interval').value;
       const newPassInput = document.getElementById('new-admin-pass').value.trim();
 
-      if (apiKeyInput) {
-        localStorage.setItem('drive_api_key', apiKeyInput);
-      } else {
-        localStorage.removeItem('drive_api_key');
-        document.getElementById('drive-api-key').value = DEFAULT_API_KEY;
-      }
+      if (apiKeyInput) localStorage.setItem('drive_api_key', apiKeyInput);
+      else { localStorage.removeItem('drive_api_key'); document.getElementById('drive-api-key').value = DEFAULT_API_KEY; }
 
-      if (folderIdInput) {
-        localStorage.setItem('drive_folder_id', folderIdInput);
-      } else {
-        localStorage.removeItem('drive_folder_id');
-        document.getElementById('drive-folder-id').value = DEFAULT_FOLDER_ID;
-      }
+      if (folderIdInput) localStorage.setItem('drive_folder_id', folderIdInput);
+      else { localStorage.removeItem('drive_folder_id'); document.getElementById('drive-folder-id').value = DEFAULT_FOLDER_ID; }
 
-      if (intervalInput) {
-        localStorage.setItem('slide_interval', intervalInput);
-      } else {
-        localStorage.removeItem('slide_interval');
-        document.getElementById('slide-interval').value = DEFAULT_INTERVAL;
-      }
+      if (intervalInput) localStorage.setItem('slide_interval', intervalInput);
+      else { localStorage.removeItem('slide_interval'); document.getElementById('slide-interval').value = DEFAULT_INTERVAL; }
 
-      if (syncIntervalInput) {
-        localStorage.setItem('sync_interval', syncIntervalInput);
-      } else {
-        localStorage.removeItem('sync_interval');
-        document.getElementById('sync-interval').value = DEFAULT_SYNC_INTERVAL;
-      }
+      if (syncIntervalInput) localStorage.setItem('sync_interval', syncIntervalInput);
+      else { localStorage.removeItem('sync_interval'); document.getElementById('sync-interval').value = DEFAULT_SYNC_INTERVAL; }
 
       if (newPassInput) {
         localStorage.setItem('admin_password', newPassInput);
-        alert('Pengaturan dan Password Admin baru berhasil disimpan!');
+        alert('Pengaturan dan Password Admin baru disimpan!');
       } else {
         alert('Pengaturan disimpan!');
       }
 
+      mediaList = []; // Reset memori agar melakukan pembacaan ulang
       loadMedia();
       startSlider();
       startAutoSync();
       closeAdminModal();
     }
 
-    function openAdminModal() {
-      document.getElementById('admin-modal').classList.remove('hidden');
-    }
-
-    function closeAdminModal() {
-      document.getElementById('admin-modal').classList.add('hidden');
-    }
+    function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
+    function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
 
     function logoutAdmin() {
       document.getElementById('login-form').classList.remove('hidden');

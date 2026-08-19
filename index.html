@@ -77,6 +77,26 @@
       transform: scale(1.05);
     }
 
+    /* Indikator Sync Latar Belakang */
+    #sync-indicator {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 998;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #sync-indicator.show { opacity: 1; }
+    .dot { width: 8px; height: 8px; background: #00ff66; border-radius: 50%; }
+
     /* Modal Styling */
     .modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -111,6 +131,11 @@
 
   <!-- Fullscreen Display Area -->
   <div id="slider-container" class="fullscreen">
+    <!-- Indikator Auto Sync -->
+    <div id="sync-indicator">
+      <span class="dot"></span> Memperbarui Konten Drive...
+    </div>
+
     <div id="media-display">
       <h3 style="color: white; font-weight: normal;">Memuat media...</h3>
     </div>
@@ -148,6 +173,9 @@
         <label>Interval Slide (Detik):</label>
         <input type="number" id="slide-interval" value="5" min="1">
 
+        <label>Interval Auto Sync Drive (Menit):</label>
+        <input type="number" id="sync-interval" value="2" min="1">
+
         <label>Password Admin Baru:</label>
         <input type="password" id="new-admin-pass" placeholder="Kosongkan jika tak diubah">
 
@@ -155,7 +183,7 @@
         <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
       </div>
 
-      <button class="close-btn" onclick="closeAdminModal()">Tutup / Cancel</button>
+      <button class="close-btn" onclick="closeAdminModal()">Tutup</button>
     </div>
   </div>
 
@@ -163,14 +191,17 @@
     // ============================================================
     // KONFIGURASI DEFAULT
     // ============================================================
+   
     const DEFAULT_API_KEY = 'AIzaSyA1y9CHz-Jf6NKUZRCYvNfHF6VM8PYLOSY';
     const DEFAULT_FOLDER_ID = '1QNUjnXB7X8su84LAVCxaoGIud3rQZLht';
     const DEFAULT_PASSWORD = 'admin123';
     const DEFAULT_INTERVAL = 5; // detik
+    const DEFAULT_SYNC_INTERVAL = 2; // menit per auto sync dari Drive
 
     let mediaList = [];
     let currentIndex = 0;
     let slideTimer = null;
+    let syncTimer = null;
 
     // Register Service Worker untuk PWA / Offline Caching
     if ('serviceWorker' in navigator) {
@@ -205,38 +236,34 @@
       return parseInt(localStorage.getItem('slide_interval')) || DEFAULT_INTERVAL;
     }
 
+    function getSyncInterval() {
+      return parseInt(localStorage.getItem('sync_interval')) || DEFAULT_SYNC_INTERVAL;
+    }
+
     // Inisialisasi Saat Halaman Dimuat
     window.onload = () => {
       document.getElementById('drive-api-key').value = getApiKey();
       document.getElementById('drive-folder-id').value = getFolderId();
       document.getElementById('slide-interval').value = getSlideInterval();
-
-      // Cek apakah browser mendukung fitur Fullscreen API
-      const fsEnabled = document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled;
-      if (!fsEnabled) {
-        // Jika dibuka di iOS Safari / browser tanpa izin Fullscreen API
-        console.warn("Fullscreen API tidak didukung di browser ini.");
-      }
+      document.getElementById('sync-interval').value = getSyncInterval();
 
       loadMedia();
       startSlider();
+      startAutoSync();
     };
 
     // Fungsi Toggle Fullscreen Mode
     function toggleFullscreen() {
       const elem = document.documentElement;
-      
       if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
         if (elem.requestFullscreen) {
           elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) { /* Safari & iOS */
+        } else if (elem.webkitRequestFullscreen) {
           elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) { /* IE/Edge */
+        } else if (elem.msRequestFullscreen) {
           elem.msRequestFullscreen();
-        } else if (elem.mozRequestFullScreen) { /* Firefox */
+        } else if (elem.mozRequestFullScreen) {
           elem.mozRequestFullScreen();
-        } else {
-          alert("Mode layar penuh tidak didukung oleh browser ini. Gunakan fitur 'Add to Home Screen' (PWA) untuk mode layar penuh otomatis.");
         }
       } else {
         if (document.exitFullscreen) {
@@ -272,6 +299,7 @@
         if (!data.files) return [];
 
         return data.files.map(file => ({
+          id: file.id,
           url: `https://lh3.googleusercontent.com/d/${file.id}`,
           type: file.mimeType.startsWith('video/') ? 'video' : 'image'
         }));
@@ -281,28 +309,49 @@
       }
     }
 
-    // Load & Cache Media
-    async function loadMedia() {
+    // Load & Cache Media dengan Indikator Visual
+    async function loadMedia(silent = false) {
       const apiKey = getApiKey();
       const folderId = getFolderId();
 
+      const indicator = document.getElementById('sync-indicator');
+      if (silent && navigator.onLine) {
+        indicator.classList.add('show');
+      }
+
       if (navigator.onLine) {
         const driveMedia = await fetchFromDrive(folderId, apiKey);
+        
         if (driveMedia.length > 0) {
-          mediaList = driveMedia;
-          try {
-            const cache = await caches.open('media-cache-v1');
-            mediaList.forEach(m => cache.add(m.url).catch(() => {}));
-            localStorage.setItem('cached_media_list', JSON.stringify(mediaList));
-          } catch(e) {}
-        } else {
+          // Cek apakah ada perubahan daftar media dibanding memori sebelumnya
+          const isChanged = JSON.stringify(driveMedia) !== JSON.stringify(mediaList);
+          
+          if (isChanged) {
+            mediaList = driveMedia;
+            
+            // Caching otomatis file baru ke memori browser
+            try {
+              const cache = await caches.open('media-cache-v1');
+              mediaList.forEach(m => cache.add(m.url).catch(() => {}));
+              localStorage.setItem('cached_media_list', JSON.stringify(mediaList));
+            } catch(e) {}
+
+            // Jika saat awal kosong, langsung tayangkan media pertama
+            if (currentIndex >= mediaList.length) {
+              currentIndex = 0;
+            }
+            showMedia(currentIndex);
+          }
+        } else if (mediaList.length === 0) {
           loadFromLocalCache();
         }
       } else {
         loadFromLocalCache();
       }
 
-      showMedia(currentIndex);
+      setTimeout(() => {
+        indicator.classList.remove('show');
+      }, 1500);
     }
 
     function loadFromLocalCache() {
@@ -310,6 +359,19 @@
       if (stored) {
         mediaList = JSON.parse(stored);
       }
+      showMedia(currentIndex);
+    }
+
+    // Pengecekan Berkelanjutan di Latar Belakang (Auto Sync)
+    function startAutoSync() {
+      const intervalMs = getSyncInterval() * 60 * 1000; // Konversi Menit ke Milidetik
+      clearInterval(syncTimer);
+      
+      syncTimer = setInterval(() => {
+        if (navigator.onLine) {
+          loadMedia(true); // mode silent sync
+        }
+      }, intervalMs);
     }
 
     // Tampilkan Media (Foto / Video)
@@ -360,6 +422,7 @@
       const apiKeyInput = document.getElementById('drive-api-key').value.trim();
       const folderIdInput = document.getElementById('drive-folder-id').value.trim();
       const intervalInput = document.getElementById('slide-interval').value;
+      const syncIntervalInput = document.getElementById('sync-interval').value;
       const newPassInput = document.getElementById('new-admin-pass').value.trim();
 
       if (apiKeyInput) {
@@ -383,15 +446,23 @@
         document.getElementById('slide-interval').value = DEFAULT_INTERVAL;
       }
 
+      if (syncIntervalInput) {
+        localStorage.setItem('sync_interval', syncIntervalInput);
+      } else {
+        localStorage.removeItem('sync_interval');
+        document.getElementById('sync-interval').value = DEFAULT_SYNC_INTERVAL;
+      }
+
       if (newPassInput) {
         localStorage.setItem('admin_password', newPassInput);
         alert('Pengaturan dan Password Admin baru berhasil disimpan!');
       } else {
-        alert('Pengaturan disimpan! (Menggunakan konfigurasi Default untuk kolom yang kosong)');
+        alert('Pengaturan disimpan!');
       }
 
       loadMedia();
       startSlider();
+      startAutoSync();
       closeAdminModal();
     }
 

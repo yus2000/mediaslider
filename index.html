@@ -34,22 +34,48 @@
       object-fit: contain;
     }
 
-    #btn-admin-login {
+    /* Floating Action Container - Kanan Bawah */
+    .controls-container {
       position: absolute;
-      top: 15px;
-      right: 15px;
-      opacity: 0.15;
-      transition: opacity 0.3s;
-      background: rgba(255, 255, 255, 0.8);
-      border: none;
-      padding: 10px 14px;
-      cursor: pointer;
-      border-radius: 6px;
-      font-weight: bold;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
       z-index: 10;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
     }
-    #btn-admin-login:hover { opacity: 1; }
 
+    /* Class aktif saat mouse digerakkan */
+    .controls-container.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .btn-action {
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 10px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.9);
+      color: #000;
+      transform: scale(1.05);
+    }
+
+    /* Modal Styling */
     .modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
@@ -86,7 +112,14 @@
     <div id="media-display">
       <h3 style="color: white; font-weight: normal;">Memuat media...</h3>
     </div>
-    <button id="btn-admin-login" onclick="openAdminModal()">⚙️ Admin</button>
+
+    <!-- Tombol Kontrol Kanan Bawah (Otomatis muncul jika mouse bergerak) -->
+    <div id="controls-bar" class="controls-container">
+      <button class="btn-action" onclick="toggleFullscreen()">
+        <span id="fs-icon">⛶</span> Fullscreen
+      </button>
+      <button class="btn-action" onclick="openAdminModal()">⚙️ Admin</button>
+    </div>
   </div>
 
   <!-- Admin Panel Modal -->
@@ -126,14 +159,15 @@
     // ============================================================
     // KONFIGURASI DEFAULT (TULISKAN LANGSUNG DI SINI)
     // ============================================================
-    const DEFAULT_API_KEY = 'AIzaSyA1y9CHz-Jf6NKUZRCYvNfHF6VM8PYLOSY';
-    const DEFAULT_FOLDER_ID = '1QNUjnXB7X8su84LAVCxaoGIud3rQZLht';
+    const DEFAULT_API_KEY = 'MASUKKAN_GOOGLE_DRIVE_API_KEY_ANDA_DI_SINI';
+    const DEFAULT_FOLDER_ID = 'MASUKKAN_FOLDER_ID_GOOGLE_DRIVE_DI_SINI';
     const DEFAULT_PASSWORD = 'admin123';
     const DEFAULT_INTERVAL = 5; // detik
 
     let mediaList = [];
     let currentIndex = 0;
     let slideTimer = null;
+    let mouseTimer = null;
 
     // Register Service Worker untuk PWA / Offline Caching
     if ('serviceWorker' in navigator) {
@@ -151,7 +185,7 @@
       navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.error);
     }
 
-    // Fungsi Mengambil Konfigurasi (Mendahulukan localStorage, lalu Default)
+    // Fungsi Mengambil Konfigurasi
     function getApiKey() {
       return localStorage.getItem('drive_api_key') || DEFAULT_API_KEY;
     }
@@ -170,14 +204,42 @@
 
     // Inisialisasi Saat Halaman Dimuat
     window.onload = () => {
-      // Isikan data ke Form Admin saat pertama kali dibuka
       document.getElementById('drive-api-key').value = getApiKey();
       document.getElementById('drive-folder-id').value = getFolderId();
       document.getElementById('slide-interval').value = getSlideInterval();
 
       loadMedia();
       startSlider();
+      setupMouseHoverEffect();
     };
+
+    // Logika Auto-Hide Tombol saat Mouse Digerakkan
+    function setupMouseHoverEffect() {
+      const controlsBar = document.getElementById('controls-bar');
+
+      window.addEventListener('mousemove', () => {
+        controlsBar.classList.add('active');
+        clearTimeout(mouseTimer);
+        
+        // Sembunyikan tombol lagi jika mouse tidak bergerak selama 3 detik
+        mouseTimer = setTimeout(() => {
+          controlsBar.classList.remove('active');
+        }, 3000);
+      });
+    }
+
+    // Fungsi Toggle Fullscreen Mode
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error(`Gagal masuk layar penuh: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
 
     // Fetch daftar file dari Google Drive API
     async function fetchFromDrive(folderId, apiKey) {
@@ -218,19 +280,15 @@
         const driveMedia = await fetchFromDrive(folderId, apiKey);
         if (driveMedia.length > 0) {
           mediaList = driveMedia;
-          
-          // Simpan media ke Cache Storage browser untuk akses offline
           try {
             const cache = await caches.open('media-cache-v1');
             mediaList.forEach(m => cache.add(m.url).catch(() => {}));
             localStorage.setItem('cached_media_list', JSON.stringify(mediaList));
           } catch(e) {}
         } else {
-          // Gunakan cache jika API mengembalikan data kosong saat online
           loadFromLocalCache();
         }
       } else {
-        // Mode Offline
         loadFromLocalCache();
       }
 
@@ -248,7 +306,7 @@
     function showMedia(index) {
       const display = document.getElementById('media-display');
       if (mediaList.length === 0) {
-        display.innerHTML = '<h3 style="color:white; text-align:center; padding: 20px;">Belum ada konten.<br><small style="font-size:0.8rem; color:#aaa;">Buka menu Admin untuk mengatur API Key & Folder ID.</small></h3>';
+        display.innerHTML = '<h3 style="color:white; text-align:center; padding: 20px;">Belum ada konten.<br><small style="font-size:0.8rem; color:#aaa;">Goyangkan mouse & buka menu Admin untuk mengatur API Key / Folder ID.</small></h3>';
         return;
       }
 
@@ -277,7 +335,7 @@
       }, intervalMs);
     }
 
-    // Fungsi-fungsi Modals Admin
+    // Fungsi Admin Modal
     function loginAdmin() {
       const passInput = document.getElementById('admin-pass').value;
       if (passInput === getAdminPassword()) {
@@ -287,43 +345,41 @@
         alert('Password Admin Salah!');
       }
     }
-    
+
     function saveSettings() {
-        const apiKeyInput = document.getElementById('drive-api-key').value.trim();
-        const folderIdInput = document.getElementById('drive-folder-id').value.trim();
-        const intervalInput = document.getElementById('slide-interval').value;
-        const newPassInput = document.getElementById('new-admin-pass').value.trim();
-  
-      // Jika diisi, simpan ke localStorage. Jika dikosongkan, hapus agar kembali ke DEFAULT
+      const apiKeyInput = document.getElementById('drive-api-key').value.trim();
+      const folderIdInput = document.getElementById('drive-folder-id').value.trim();
+      const intervalInput = document.getElementById('slide-interval').value;
+      const newPassInput = document.getElementById('new-admin-pass').value.trim();
+
       if (apiKeyInput) {
         localStorage.setItem('drive_api_key', apiKeyInput);
-          } else {
-            localStorage.removeItem('drive_api_key');
-            document.getElementById('drive-api-key').value = DEFAULT_API_KEY;
-          }
-    
+      } else {
+        localStorage.removeItem('drive_api_key');
+        document.getElementById('drive-api-key').value = DEFAULT_API_KEY;
+      }
+
       if (folderIdInput) {
         localStorage.setItem('drive_folder_id', folderIdInput);
-          } else {
-            localStorage.removeItem('drive_folder_id');
-            document.getElementById('drive-folder-id').value = DEFAULT_FOLDER_ID;
-          }
-        
+      } else {
+        localStorage.removeItem('drive_folder_id');
+        document.getElementById('drive-folder-id').value = DEFAULT_FOLDER_ID;
+      }
+
       if (intervalInput) {
         localStorage.setItem('slide_interval', intervalInput);
-          } else {
-            localStorage.removeItem('slide_interval');
-            document.getElementById('slide-interval').value = DEFAULT_INTERVAL;
-          }
-    
+      } else {
+        localStorage.removeItem('slide_interval');
+        document.getElementById('slide-interval').value = DEFAULT_INTERVAL;
+      }
+
       if (newPassInput) {
         localStorage.setItem('admin_password', newPassInput);
-            alert('Pengaturan dan Password Admin baru berhasil disimpan!');
-          } else {
-            alert('Pengaturan disimpan! (Menggunakan konfigurasi Default untuk kolom yang kosong)');
-          }
-    
-      // Muat ulang media dan jalankan slider kembali
+        alert('Pengaturan dan Password Admin baru berhasil disimpan!');
+      } else {
+        alert('Pengaturan disimpan! (Menggunakan konfigurasi Default untuk kolom yang kosong)');
+      }
+
       loadMedia();
       startSlider();
       closeAdminModal();

@@ -1,6 +1,6 @@
 // Settings Nilai Default
-const DEFAULT_API_KEY = 'AIzaSyBJyOWGFsKwOtjOSUlXHwB-qwuhrbr3m2M';
-const DEFAULT_FOLDER_ID = '18D_Xnk5soc0BaDBdlI0jvt9BC0i391RC';
+const DEFAULT_API_KEY = 'AIzaSyA1y9CHz-Jf6NKUZRCYvNfHF6VM8PYLOSY';
+const DEFAULT_FOLDER_ID = '1QNUjnXB7X8su84LAVCxaoGIud3rQZLht';
 const DEFAULT_PASSWORD = 'admin123';
 const DEFAULT_INTERVAL = 10; 
 const DEFAULT_SYNC_INTERVAL = 5; // Ditingkatkan ke 5 menit agar hemat bandwith

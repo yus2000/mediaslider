@@ -310,23 +310,37 @@ function logoutAdmin() {
   closeAdminModal();
 }
 
-// Pengendali Jam Digital Tanpa Detik
+// Pengendali Jam Digital & Tanggal (Kanan Tengah)
 function startDigitalClock() {
-  const clockEl = document.getElementById('digital-clock');
-  if (!clockEl) return;
+  const dateEl = document.getElementById('clock-date');
+  const timeEl = document.getElementById('clock-time');
+
+  if (!timeEl || !dateEl) return;
+
+  const hariList = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+  const bulanList = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
 
   function updateClock() {
     const now = new Date();
+    
+    // 1. Format Tanggal: "SABTU, 29 AGU 2026"
+    const namaHari = hariList[now.getDay()];
+    const tgl = now.getDate();
+    const namaBulan = bulanList[now.getMonth()];
+    const tahun = now.getFullYear();
+
+    dateEl.textContent = `${namaHari}, ${tgl} ${namaBulan} ${tahun}`;
+
+    // 2. Format Jam: "11:51"
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    
-    // Format: HH:MM
-    clockEl.textContent = `${hours}:${minutes}`;
+
+    timeEl.textContent = `${hours}:${minutes}`;
   }
 
-  updateClock(); // Jalankan langsung saat pertama kali dimuat
+  updateClock(); // Jalankan saat muat halaman
   setInterval(updateClock, 1000); // Perbarui setiap detik
 }
 
-// Jalankan jam saat halaman dimuat
+// Jalankan otomatis setelah halaman dimuat
 document.addEventListener('DOMContentLoaded', startDigitalClock);

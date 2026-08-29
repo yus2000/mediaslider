@@ -29,7 +29,9 @@
 
 /* Tampilan Hari & Tanggal (Atas Jam) */
 #clock-date {
-  font-family: system-ui, -apple-system, sans-serif; /* Font standar bersih untuk tanggal */
+  /* font-family: system-ui, -apple-system, sans-serif; Font standar bersih untuk tanggal */
+  
+  font-family: 'LEDCalculator', monospace, sans-serif;
   font-size: clamp(0.75rem, 1.2vw, 1.1rem);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
